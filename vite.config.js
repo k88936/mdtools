@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
     base: '/mdtools/',
     build:{
-        outDir: 'docs',
+        outDir: 'dist',
 
     },
     plugins: [
