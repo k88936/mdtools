@@ -56,7 +56,7 @@ func main() {
 \`\`\`
 `;
 
-function CM({value, onChange}) {
+function CodeArea({value, onChange}) {
     return <CodeMirror
         onChange={onChange}
         value={value}
@@ -68,7 +68,7 @@ function CM({value, onChange}) {
     />;
 }
 
-function Preview({text}) {
+function PreviewArea({text}) {
     const markdownIt = new MarkdownIt('commonmark', {
         html: true,
         linkify: true,
@@ -94,7 +94,7 @@ function Preview({text}) {
     );
 }
 
-function UploadDemo({onMarkdownLoaded}) {
+function UploadArea({onMarkdownLoaded}) {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [variant, setVariant] = useState('empty');
 
@@ -139,77 +139,43 @@ function UploadDemo({onMarkdownLoaded}) {
         </Upload>
     );
 }
+async function generatePDF(filename) {
+    // Wait one tick so the preview element is definitely in the DOM
+    await new Promise(res => setTimeout(res, 0));
+
+    const element = document.getElementById('markdown-preview');
+    if (!element) {
+        console.error('Preview element not found');
+        return;
+    }
+
+    const opt = {
+        margin: 0,
+        filename: `${filename}.pdf`,
+        image: {type: 'jpeg', quality: 0.98},
+        html2canvas: {scale: 2},
+        jsPDF: {
+            unit: 'px',
+            format: [element.scrollWidth, element.scrollHeight],
+            orientation: 'portrait'
+        }
+    };
+    await html2pdf().set(opt).from(element).save();
+}
+const TODAY = new Date().toISOString().slice(0, 13)
 
 function App() {
     const [text, setText] = useState(initialCode);
 
-    let footer = <Footer className='stuff'
-                         left={[[{
-                             url: 'http://www.github.com/k88936/mdtools/',
-                             label: 'mdtools'
-                         }, ' by k88936'], 'v0.1.0']}
-
-                         right={[{
-                             url: 'http://www.github.com/k88936/mdtools/issues',
-                             label: 'Feedback'
-                         }]}/>;
-    let hhhh = <Header
-
-        >
-
-            <img
-                src={import.meta.env.BASE_URL + 'markdown.svg'}
-                alt="Markdown logo"
-                style={{verticalAlign: 'middle'}}
-            />
-            <Tray>
-                <Text size={Text.Size.L} bold>mdtools</Text>
-            </Tray>
-
-            <Tray>
-                <HeaderIcon
-                    icon="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;20&quot; height=&quot;20&quot; fill=&quot;currentColor&quot; viewBox=&quot;0 0 20 20&quot;><path fill-rule=&quot;evenodd&quot; d=&quot;M17.5 10a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0ZM10 19a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm.086-12.686c.357 0 .668.114.932.343.264.229.396.514.396.857 0 .314-.096.593-.289.836a5.36 5.36 0 0 1-.653.686c-.329.285-.618.6-.868.942-.25.343-.375.729-.375 1.158 0 .2.075.367.225.503.15.136.325.204.525.204a.763.763 0 0 0 .546-.215.987.987 0 0 0 .29-.535c.057-.3.185-.568.385-.804.2-.236.415-.46.643-.675.329-.314.61-.657.847-1.028a2.28 2.28 0 0 0 .353-1.243c0-.729-.296-1.325-.89-1.79-.592-.464-1.281-.696-2.067-.696a3.65 3.65 0 0 0-1.554.343 2.396 2.396 0 0 0-1.125 1.05.773.773 0 0 0-.096.546c.036.193.132.34.29.44.2.114.406.15.62.107a.853.853 0 0 0 .536-.365 1.662 1.662 0 0 1 1.329-.664Zm-.129 8.829c.3 0 .554-.104.761-.311.207-.207.31-.46.31-.76s-.103-.554-.31-.761a1.034 1.034 0 0 0-.76-.311c-.3 0-.554.103-.761.31-.207.208-.311.461-.311.761s.104.554.31.761c.208.207.461.31.761.31Z&quot; clip-rule=&quot;evenodd&quot;/></svg>"
-                    title="Help"
-                />
-            </Tray>
-        </Header>
-    ;
-
-    async function generatePDF() {
-        // Wait one tick so the preview element is definitely in the DOM
-        await new Promise(res => setTimeout(res, 0));
-
-        const element = document.getElementById('markdown-preview');
-        if (!element) {
-            console.error('Preview element not found');
-            return;
-        }
-
-        const opt = {
-            margin: 0,
-            filename: `${filename}.pdf`,
-            image: {type: 'jpeg', quality: 0.98},
-            html2canvas: {scale: 2},
-            jsPDF: {
-                unit: 'px',
-                format: [element.scrollWidth, element.scrollHeight],
-                orientation: 'portrait'
-            }
-        };
-        await html2pdf().set(opt).from(element).save();
-    }
-
-    const TODAY = new Date().toISOString().slice(0, 13)
     const [filename, setfilename] = useState(TODAY);
     return (
         <>
-            {hhhh}
             <Grid>
+                <UploadArea onMarkdownLoaded={setText}/>
                 <Row start='xs'>
                     <Col xs={6}>
-                        <UploadDemo onMarkdownLoaded={setText}/>
                         <Island>
-                            <CM value={text} onChange={setText}/>
+                            <CodeArea value={text} onChange={setText}/>
                             <Panel>
                                 <Button onClick={() => alertService.warning('Warning! not implemented')}
                                         primary>Paste</Button>
@@ -219,8 +185,11 @@ function App() {
                         </Island>
                     </Col>
                     <Col xs={6}>
-
-
+                        <div id={'markdown-preview'}>
+                            <Island style={{padding: 16}}>
+                                <PreviewArea text={text}/>
+                            </Island>
+                        </div>
                         <Row start='xs'>
                             <Col xs={10}>
                                 <Input label='filename' height={ControlsHeight.S} value={filename}
@@ -228,21 +197,14 @@ function App() {
                                        autogrow onClear={() => setfilename('')}/>
                             </Col>
                             <Col xs={2}>
-                                <Button onClick={generatePDF} style={{marginTop: 10, width: '100%'}}
+                                <Button onClick={()=>generatePDF(filename)} style={{marginTop: 10, width: '100%'}}
                                         height={ControlsHeight.L}
                                         primary>save</Button>
                             </Col>
                         </Row>
-                        <div id={'markdown-preview'}>
-                            <Island style={{padding: 16}}>
-                                <Preview text={text}/>
-                            </Island>
-                        </div>
                     </Col>
                 </Row>
             </Grid>
-
-            {footer}
         </>
 
     )
